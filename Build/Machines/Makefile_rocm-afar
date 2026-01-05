@@ -1,0 +1,64 @@
+# Makefile for OpenMPI built with AMD ROCm AFAR compilers
+
+FORTRAN_COMPILE      = mpifort -c -cpp
+FORTRAN_FIXEDFORM    = -ffixed-form
+FORTRAN_BOUND_CHECK  =
+FORTRAN_DEBUG        = -O0 -g
+FORTRAN_OPTIMIZE     = -O3 -g -ffast-math
+FORTRAN_PROFILE      = -O2 -g
+
+CC_COMPILE           = mpicc -c
+CC_DEBUG             = -O0 -g
+CC_OPTIMIZE          = $(FORTRAN_OPTIMIZE)
+
+#-- Default to AMD HIP for GCC on current Cray machine
+DEVICE_HIP           = 1
+DEVICE_COMPILE       = hipcc -c -D__HIP_PLATFORM_HCC__
+DEVICE_DEBUG         = -g
+DEVICE_OPTIMIZE      = -O3 -ffast-math -g
+
+LINK = mpifort -fopenmp
+
+# Define default switches for this compiler. These can be overwritten at
+# build time with, e.g., 'make ENABLE_OMP_OFFLOAD=0 <target>'
+ENABLE_OMP          ?= 1
+ENABLE_OMP_OFFLOAD  ?= 1
+USE_ISO_10646       ?= 0
+
+#-- Silo library include and link line flag and location
+INCLUDE_SILO = -I${SILO_DIR}/include
+LIBRARY_SILO = -L${SILO_DIR}/lib -lsiloh5 -lstdc++
+
+#-- HDF5 library include and link line flag and location
+INCLUDE_HDF5 = -I${HDF5_DIR}/include
+LIBRARY_HDF5 = -L${HDF5_DIR}/lib -lhdf5_fortran -lhdf5 -lz
+
+#-- LAPACK library link line flag and location
+LAPACK_DIR    ?=
+LIBRARY_LAPACK = -L${LAPACK_DIR}/lib -llapack -lblas
+ifeq ($(strip $(LAPACK_DIR)),)
+  LIBRARY_LAPACK =
+endif
+
+INCLUDE_PREPROCESSOR = -I$(PATH_GENASIS)/Build
+
+ifeq ($(ENABLE_OMP), 1)
+  FORTRAN_COMPILE += -fopenmp
+  CC_COMPILE      += -fopenmp
+else
+  ENABLE_OMP_OFFLOAD = 0
+endif
+
+ifeq ($(ENABLE_OMP_OFFLOAD), 1)
+  INCLUDE_DEVICE = -I${ROCM_RUNTIME_PATH}/include -I${ROCM_RUNTIME_PATH}/include/hipfort/amdgcn
+  LIBRARY_DEVICE = -L${ROCM_RUNTIME_PATH}/lib -lamdhip64 -lrocprofiler-sdk-roctx
+  FORTRAN_COMPILE += --offload-arch=${GFXARCH} -fstack-arrays
+  DEVICE_COMPILE  += --offload-arch=${GFXARCH}
+  CC_COMPILE      += --offload-arch=${GFXARCH}
+  LINK            += --offload-arch=${GFXARCH} #-lFortranRuntimeHostDevice
+  DEFINES         += -DENABLE_OMP_OFFLOAD -D__HIP_PLATFORM_AMD__
+else
+#  DEFINES       += --offload=disable
+endif
+
+DEFINES   += -DLLVMFlang
