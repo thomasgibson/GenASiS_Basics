@@ -2,6 +2,7 @@ module ConservationLawStep_Form
 
   use Basics
   use ConservedFields_Template
+  use hipfort_roctx
 
   implicit none
   private
@@ -324,7 +325,8 @@ contains
       TimeStep
 
     integer ( KDI ) :: &
-      iV  !-- iVariable
+      iV, &  !-- iVariable
+      iRoctxLevel
     type ( TimerForm ), pointer :: &
       T_RK, &
       T_P, &
@@ -361,6 +363,7 @@ contains
     
     call Show ( 'Solving Substep 1', CONSOLE % INFO_4 )
 
+    iRoctxLevel = roctxRangePush ( "RK_Substep_1" // char(0) )
     call CLS % ComputeUpdate ( TimeStep ) !-- K1 = dT * RHS
     
     call Show ( 'Adding Update', CONSOLE % INFO_5 )
@@ -400,12 +403,14 @@ contains
       call T_DT_H % Stop ( )
     end if
 
+    iRoctxLevel = roctxRangePush ( "Communication" // char(0) )
     T_C  =>  PROGRAM_HEADER % Timer &
                ( CLS % iTimerCommunication, 'Communication', Level = 2 )
     call T_C % Start ( )
     call DM % StartGhostExchange ( )
     call DM % FinishGhostExchange ( )
     call T_C % Stop ( )
+    iRoctxLevel = roctxRangePop ( )  !-- Communication
     
     T_DT_D  =>  PROGRAM_HEADER % Timer &
                   ( CLS % iTimerDataTransferDevice, 'DataTransfer to Device', &
@@ -415,11 +420,13 @@ contains
       call Primitive % UpdateDevice ( )
       call T_DT_D % Stop ( )
     end if
+    iRoctxLevel = roctxRangePop ( )  !-- RK_Substep_1
     
     !-- Substep 2
     
     call Show ( 'Solving Substep 2', CONSOLE % INFO_4 )
 
+    iRoctxLevel = roctxRangePush ( "RK_Substep_2" // char(0) )
     call CLS % ComputeUpdate ( TimeStep ) !-- K2 = dT * RHS
     
     call Show ( 'Combining Updates', CONSOLE % INFO_5 )
@@ -449,6 +456,7 @@ contains
     call Current % ComputeAuxiliary ( Current % Value )
     call T_A % Stop ( )
     
+    iRoctxLevel = roctxRangePush ( "Communication" // char(0) )
     if ( .not. DM % DevicesCommunicate ) then
       call T_DT_H % Start ( )
       call Primitive % UpdateHost ( ) 
@@ -465,6 +473,8 @@ contains
       call Primitive % UpdateDevice ( ) 
       call T_DT_D % Stop ( )
     end if
+    iRoctxLevel = roctxRangePop ( )  !-- Communication
+    iRoctxLevel = roctxRangePop ( )  !-- RK_Substep_2
     
     end associate !-- DM, etc.
     end associate !-- CF
@@ -481,7 +491,8 @@ contains
 
     integer ( KDI ) :: &
       iD, &  !-- iDimension
-      iV
+      iV, &
+      iRoctxLevel
     type ( TimerForm ), pointer :: &
       T_U
 
@@ -496,10 +507,19 @@ contains
 
       call Show ( iD, 'iD', CONSOLE % INFO_5 )
 
+      iRoctxLevel = roctxRangePush ( "Difference" // char(0) )
       call CLS % ComputeDifferences ( iD )
+      iRoctxLevel = roctxRangePop ( )  !-- Difference
+
+      iRoctxLevel = roctxRangePush ( "Reconstruction" // char(0) )
       call CLS % ComputeReconstruction ( )
+      iRoctxLevel = roctxRangePop ( )  !-- Reconstruction
+
+      iRoctxLevel = roctxRangePush ( "Fluxes" // char(0) )
       call CLS % ComputeFluxes ( iD )
+      iRoctxLevel = roctxRangePop ( )  !-- Fluxes
       
+      iRoctxLevel = roctxRangePush ( "Update" // char(0) )
       T_U  =>  PROGRAM_HEADER % Timer &
                  ( CLS % iTimerUpdate, 'Update', Level = 2 )
       call T_U % Start ( )
@@ -512,6 +532,7 @@ contains
                  UseDeviceOption = CF % AllocatedDevice )
       end do
       call T_U % Stop ( )
+      iRoctxLevel = roctxRangePop ( )  !-- Update
 
     end do
     

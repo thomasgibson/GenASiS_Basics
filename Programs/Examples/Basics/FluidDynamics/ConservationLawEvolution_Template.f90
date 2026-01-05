@@ -4,6 +4,7 @@ module ConservationLawEvolution_Template
   use DistributedMesh_Form
   use ConservedFields_Template
   use ConservationLawStep_Form
+  use hipfort_roctx
 
   implicit none
   private
@@ -162,6 +163,8 @@ contains
       RestartTime
     type ( TimerForm ), pointer :: &
       T
+    integer :: &
+      iRoctxLevel
       
     associate &
       ( DM  => CLE % DistributedMesh, &
@@ -204,16 +207,21 @@ contains
 
     do while ( CLE % Time < CLE % FinishTime &
                .and. CLE % iCycle < CLE % FinishCycle )
+      iRoctxLevel = roctxRangePush ( "EvolveStep" // char(0) )
 
       call Show ( 'Solving Conservation Equations', CONSOLE % INFO_2 )
 
+      iRoctxLevel = roctxRangePush ( "ComputeTimeStep" // char(0) )
       call ComputeTimeStep ( CLE )
       if ( CLE % Time + CLE % TimeStep > CLE % WriteTime ) &
         CLE % TimeStep = CLE % WriteTime - CLE % Time
       call Show ( CLE % TimeStep, CLE % TimeUnit, 'TimeStep', &
                   CONSOLE % INFO_3 )
+      iRoctxLevel = roctxRangePop ( )  !-- ComputeTimeStep
       
+      iRoctxLevel = roctxRangePush ( "CLS_Solve" // char(0) )
       call CLS % Solve ( CLE % TimeStep )
+      iRoctxLevel = roctxRangePop ( )  !-- CLS_Solve
 
       CLE % iCycle = CLE % iCycle + 1
       CLE % Time = CLE % Time + CLE % TimeStep
@@ -238,6 +246,7 @@ contains
         call T % Start ( )
         
       end if
+      iRoctxLevel = roctxRangePop ( )  !-- EvolveStep
       
     end do
     
