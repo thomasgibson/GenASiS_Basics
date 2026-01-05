@@ -63,12 +63,12 @@ contains
     integer ( KDI ), dimension ( : ), intent ( out ) :: &
       B
 
-    !$OMP parallel workshare
+!    !$OMP parallel workshare
     B = A
-    !$OMP end parallel workshare
+!    !$OMP end parallel workshare
 
   end subroutine CopyInteger_1D
-  
+
   
   ! subroutine CopyInteger_2D ( A, B )
 
@@ -183,12 +183,12 @@ contains
     integer ( KBI ), dimension ( : ), intent ( out ) :: &
       B
 
-    !$OMP parallel workshare
+!    !$OMP parallel workshare
     B = A
-    !$OMP end parallel workshare
+!    !$OMP end parallel workshare
 
   end subroutine CopyBigInteger_1D
-  
+
   
   ! subroutine CopyBigInteger_2D ( A, B )
 

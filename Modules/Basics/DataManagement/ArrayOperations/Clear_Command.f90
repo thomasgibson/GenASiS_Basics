@@ -49,9 +49,9 @@ contains
     integer ( KDI ), dimension ( : ), intent ( out ) :: &
       A
 
-    !$OMP parallel workshare
+!    !$OMP parallel workshare
     A = 0_KDI
-    !$OMP end parallel workshare
+!    !$OMP end parallel workshare
 
   end subroutine ClearInteger_1D
 
@@ -61,9 +61,9 @@ contains
     integer ( KDI ), dimension ( :, : ), intent ( out ) :: &
       A
 
-    !$OMP parallel workshare
+!    !$OMP parallel workshare
     A = 0_KDI
-    !$OMP end parallel workshare
+!    !$OMP end parallel workshare
 
   end subroutine ClearInteger_2D
 
@@ -73,9 +73,9 @@ contains
     integer ( KDI ), dimension ( :, :, : ), intent ( out ) :: &
       A
 
-    !$OMP parallel workshare
+!    !$OMP parallel workshare
     A = 0_KDI
-    !$OMP end parallel workshare
+!    !$OMP end parallel workshare
 
   end subroutine ClearInteger_3D
 

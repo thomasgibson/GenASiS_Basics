@@ -27,7 +27,6 @@ contains
 
     type ( c_ptr ) :: &
       DA
-      
     if ( OnDevice ( Value ) ) then
 #ifdef ENABLE_OMP_OFFLOAD
       !$OMP target data use_device_ptr ( Value )

@@ -18,7 +18,7 @@ module CONSOLE_Singleton
     logical ( KDL ) :: &
       Muted = .false.
     procedure ( AbortInterface ), nopass, pointer :: &
-      Abort => null ( )
+      Abort
   contains
     procedure, public, nopass :: &
       Initialize
@@ -178,9 +178,9 @@ contains
     call ShowMessage ( 'Unmuting CONSOLE', CONSOLE % INFO_1 )
 
   end subroutine Unmute
-  
 
-  elemental subroutine Finalize ( C )
+
+  impure elemental subroutine Finalize ( C )
 
     type ( ConsoleSingleton ), intent ( inout ) :: &
       C

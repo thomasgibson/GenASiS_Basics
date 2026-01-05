@@ -24,19 +24,19 @@ module Device_C
     IsOffloadEnabled, &
     DeviceMemGetInfo
   
-  interface 
-    
+  interface
+
     integer ( c_int ) function SetDevice ( iDevice ) &
-                                 bind ( c, name = 'SetDevice' )
+                                 bind ( c, name = 'SetDevice_OMP' )
       use iso_c_binding
       implicit none
       integer ( c_int ), value :: &
         iDevice
     end function SetDevice
-    
+
 
     integer ( c_int ) function GetDevice ( iDevice ) &
-                                 bind ( c, name = 'GetDevice' )
+                                 bind ( c, name = 'GetDevice_OMP' )
       use iso_c_binding
       implicit none
       integer ( c_int ) :: &
@@ -142,18 +142,18 @@ module Device_C
       type ( c_ptr ), value :: &
         Host
     end function DisassociateTarget
-    
-    
+
+
     type ( c_ptr ) function AllocateHostDouble ( nValues ) &
-                              bind ( c, name = 'AllocateHostDouble_Device' )
+                              bind ( c, name = 'AllocateHostDouble_Device_OMP' )
       use iso_c_binding
       implicit none
       integer ( c_int ), value :: &
         nValues
     end function AllocateHostDouble
-    
-    
-    subroutine FreeHost ( Host ) bind ( c, name = 'FreeHost_Device' )
+
+
+    subroutine FreeHost ( Host ) bind ( c, name = 'FreeHost_Device_OMP' )
       use iso_c_binding
       implicit none
       type ( c_ptr ), value :: &
@@ -199,10 +199,10 @@ module Device_C
       use iso_c_binding
       implicit none
     end function IsOffloadEnabled
-    
-    
+
+
     integer ( c_int ) function DeviceMemGetInfo ( Free, Total ) &
-                        bind ( c, name = 'DeviceMemGetInfo_Device' )
+                        bind ( c, name = 'DeviceMemGetInfo_Device_OMP' )
       use iso_c_binding
       implicit none
       integer ( c_size_t ) :: &

@@ -3,6 +3,13 @@
 #include <stdbool.h>
 #include <omp.h>
 
+#ifdef USE_LLVM_RUNTIME
+void llvm_omp_target_free_host(void *DevicePtr, int DeviceNum);
+void llvm_omp_target_free_device(void *DevicePtr, int DeviceNum);
+void *llvm_omp_target_alloc_host(size_t Size, int DeviceNum);
+void *llvm_omp_target_alloc_device(size_t Size, int DeviceNum);
+#endif
+
 int OnTarget_OMP ( void * Host )
   {
   int iDevice;
@@ -28,12 +35,16 @@ void * AllocateTargetInteger_OMP ( int nValues )
   /*
   printf("nValues Alloc: %d\n", nValues );
   printf("iDevice: %d\n", iDevice );
-  */ 
+  */
+  #ifdef USE_LLVM_RUNTIME
+  D_Pointer = llvm_omp_target_alloc_device ( sizeof ( int ) * nValues, iDevice );
+  #else
   D_Pointer = omp_target_alloc ( sizeof ( int ) * nValues, iDevice );
-  
+  #endif
+
   // printf("D_Pointer : %p\n", D_Pointer);
-  #endif 
-  
+  #endif
+
   return D_Pointer;
   }
 
@@ -52,11 +63,15 @@ void * AllocateTargetDouble_OMP ( int nValues )
   /*
   printf("nValues Alloc: %d\n", nValues );
   printf("pre iDevice: %d\n", iDevice );
-  */ 
+  */
+  #ifdef USE_LLVM_RUNTIME
+  D_Pointer = llvm_omp_target_alloc_device ( sizeof ( double ) * nValues, iDevice );
+  #else
   D_Pointer = omp_target_alloc ( sizeof ( double ) * nValues, iDevice );
-  
+  #endif
+
   //printf("D_Pointer : %p\n", D_Pointer);
-  
+
   //omp_set_default_device(iDevice);
   /*
   iDevice = omp_get_default_device();
@@ -195,12 +210,16 @@ int AssociateTargetLogical_OMP
 void FreeTarget_OMP ( void * D_Pointer )
   {
   int iDevice;
-  
+
   #ifdef ENABLE_OMP_OFFLOAD
   iDevice = omp_get_default_device();
+  #ifdef USE_LLVM_RUNTIME
+  llvm_omp_target_free_device ( D_Pointer, iDevice );
+  #else
   omp_target_free ( D_Pointer, iDevice );
-  #endif 
-  
+  #endif
+  #endif
+
   }
 
   
@@ -276,4 +295,61 @@ bool OffloadEnabled ( )
   #else
   return false;
   #endif
+  }
+
+int SetDevice_OMP ( int iDevice )
+  {
+  #ifdef ENABLE_OMP_OFFLOAD
+  omp_set_default_device(iDevice);
+  return 0;
+  #else
+  return -1;
+  #endif
+  }
+
+
+int GetDevice_OMP ( int * iDevice )
+  {
+  #ifdef ENABLE_OMP_OFFLOAD
+  *iDevice = omp_get_default_device();
+  return 0;
+  #else
+  return -1;
+  #endif
+  }
+
+void * AllocateHostDouble_Device_OMP ( int nValues )
+  {
+  void * Host;
+
+  #ifdef ENABLE_OMP_OFFLOAD
+  #ifdef USE_LLVM_RUNTIME
+  Host = llvm_omp_target_alloc_host(sizeof ( double ) * nValues, omp_get_initial_device());
+  #else
+  Host = omp_target_alloc( sizeof ( double ) * nValues, omp_get_initial_device());
+  #endif
+  #else
+  Host = malloc ( sizeof ( double ) * nValues );
+  #endif
+  return Host;
+  }
+
+void FreeHost_Device_OMP ( void * Host )
+  {
+  #ifdef ENABLE_OMP_OFFLOAD
+  #ifdef USE_LLVM_RUNTIME
+  llvm_omp_target_free_host(Host, omp_get_initial_device());
+  #else
+  omp_target_free(Host, omp_get_initial_device());
+  #endif
+  #else
+  free ( Host );
+  #endif
+  }
+
+int DeviceMemGetInfo_Device_OMP ( size_t * Free, size_t * Total )
+  {
+  Free  = 0;
+  Total = 0;
+  return -1;
   }
