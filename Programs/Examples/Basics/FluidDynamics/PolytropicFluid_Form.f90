@@ -3,6 +3,7 @@ module PolytropicFluid_Form
   use Basics
   use DistributedMesh_Form
   use PressurelessFluid_Form
+  use hipfort_roctx
 
   implicit none
   private
@@ -225,9 +226,13 @@ contains
     logical ( KDL ), intent ( in ), optional :: &
       UseDeviceOption
       
+    integer ( KDI ) :: &
+      iRoctxLevel
     logical ( KDL ) :: &
       UseDevice
       
+    iRoctxLevel = roctxRangePush ( "ComputeConserved" // char(0) )
+
     UseDevice = OnDevice ( Value ( :, CF % CONSERVED_DENSITY ) )
     if ( present ( UseDeviceOption ) ) &
       UseDevice = UseDeviceOption
@@ -244,6 +249,8 @@ contains
         Value ( :, CF % VELOCITY ( 3 ) ), &
         UseDevice )
 
+    iRoctxLevel = roctxRangePop ( )  !-- ComputeConserved
+
   end subroutine ComputeConserved
 
 
@@ -256,9 +263,13 @@ contains
     logical ( KDL ), intent ( in ), optional :: &
       UseDeviceOption
       
+    integer ( KDI ) :: &
+      iRoctxLevel
     logical ( KDL ) :: &
       UseDevice
-      
+
+    iRoctxLevel = roctxRangePush ( "ComputePrimitive" // char(0) )
+
     UseDevice = OnDevice ( Value ( :, CF % CONSERVED_DENSITY ) )
     if ( present ( UseDeviceOption ) ) &
       UseDevice = UseDeviceOption
@@ -274,6 +285,8 @@ contains
              Value ( :, CF % VELOCITY ( 2 ) ), &
              Value ( :, CF % VELOCITY ( 3 ) ), &
              UseDevice )
+
+    iRoctxLevel = roctxRangePop ( )  !-- ComputePrimitive
                
   end subroutine ComputePrimitive
   
@@ -287,9 +300,13 @@ contains
     logical ( KDL ), intent ( in ), optional :: &
       UseDeviceOption
       
+    integer ( KDI ) :: &
+      iRoctxLevel
     logical ( KDL ) :: &
       UseDevice
-      
+
+    iRoctxLevel = roctxRangePush ( "ComputeAuxiliary" // char(0) )
+
     UseDevice = OnDevice ( Value ( :, CF % PRESSURE ) )
     if ( present ( UseDeviceOption ) ) &
       UseDevice = UseDeviceOption
@@ -317,6 +334,8 @@ contains
              Value ( :, CF % PRESSURE ), &
              Value ( :, CF % ADIABATIC_INDEX ), &
              UseDevice )
+
+    iRoctxLevel = roctxRangePop ( )  !-- ComputeAuxiliary
     
   end subroutine ComputeAuxiliary
   
@@ -372,7 +391,8 @@ contains
       UseDeviceOption
 
     integer ( KDI ) :: &
-      jD, kD   !-- jDimension, kDimension
+      jD, kD, &  !-- jDimension, kDimension
+      iRoctxLevel
     integer ( KDI ), dimension ( 3 ) :: &
       oBI, &  !-- oBoundaryInterior
       oBE, &  !-- oBoundaryExterior
@@ -385,6 +405,8 @@ contains
     logical ( KDL ) :: &
       PrimitiveOnly, &
       UseDevice
+
+    iRoctxLevel = roctxRangePush ( "ApplyBoundaryConditions" // char(0) )
 
     call CF % PressurelessFluidForm % ApplyBoundaryConditions &
            ( ExteriorValue, InteriorValue, iDimension, iBoundary, &
@@ -445,10 +467,15 @@ contains
       call PROGRAM_HEADER % Abort ( )
     end select 
 
-    if ( PrimitiveOnly ) return
+    if ( PrimitiveOnly ) then
+      iRoctxLevel = roctxRangePop ( )  !-- ApplyBoundaryConditions
+      return
+    end if
 
     call CF % ComputeAuxiliary ( ExteriorValue, UseDeviceOption )
     call CF % ComputeConserved ( ExteriorValue, UseDeviceOption )
+
+    iRoctxLevel = roctxRangePop ( )  !-- ApplyBoundaryConditions
 
     end associate  !-- iD, etc.
   
@@ -472,12 +499,15 @@ contains
     integer ( KDI ) :: &
       iDensity, &
       iEnergy, &
-      iMomentumDim
+      iMomentumDim, &
+      iRoctxLevel
     integer ( KDI ), dimension ( 3 ) :: &
       iMomentum
     logical ( KDL ) :: &
       UseDevice
-      
+
+    iRoctxLevel = roctxRangePush ( "ComputeRawFluxes" // char(0) )
+
     UseDevice = OnDevice ( Value ( :, CF % CONSERVED_DENSITY ) )
     if ( present ( UseDeviceOption ) ) &
       UseDevice = UseDeviceOption
@@ -510,6 +540,8 @@ contains
              Value ( :, CF % PRESSURE ), &
              Value ( :, CF % VELOCITY ( iDimension ) ), &
              UseDevice, iDimension )
+
+    iRoctxLevel = roctxRangePop ( )  !-- ComputeRawFluxes
 
   end subroutine ComputeRawFluxes
   

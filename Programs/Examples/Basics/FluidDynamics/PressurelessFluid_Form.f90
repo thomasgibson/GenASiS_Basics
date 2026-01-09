@@ -4,6 +4,7 @@ module PressurelessFluid_Form
   use DistributedMesh_Form
   use ConservedFields_Template
   use ConservationLawStep_Form
+  use hipfort_roctx
 
   implicit none
   private
@@ -469,6 +470,8 @@ contains
     logical ( KDL ), intent ( in ), optional :: &
       UseDeviceOption
     
+    integer ( KDI ) :: &
+      iRoctxLevel
     real ( KDR ), dimension ( :, :, : ), pointer :: &
       AP_I, AP_O, &
       AM_I, AM_O, &
@@ -476,7 +479,9 @@ contains
       LM_I, LM_O
     logical ( KDL ) :: &
       UseDevice
-      
+
+    iRoctxLevel = roctxRangePush ( "ComputeRiemannSolverInput" // char(0) )
+
     select type ( S => Step )
     type is ( ConservationLawStepForm )
 
@@ -507,6 +512,8 @@ contains
              UseDevice )
              
     end select !-- S
+
+    iRoctxLevel = roctxRangePop ( )  !-- ComputeRiemannSolverInput
       
   end subroutine ComputeRiemannSolverInput
 

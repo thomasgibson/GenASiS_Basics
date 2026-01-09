@@ -335,6 +335,8 @@ contains
       T_C, &
       T_DT_D
 
+    iRoctxLevel = roctxRangePush ( "CLS_Solve" // char(0) )
+
     associate &
       ( CF => CLS % ConservedFields )
     associate &
@@ -349,6 +351,7 @@ contains
     
     call Show ( 'Preparing Step', CONSOLE % INFO_4 )
     
+    iRoctxLevel = roctxRangePush ( "Preparing Step" // char(0) )
     T_RK  =>  PROGRAM_HEADER % Timer &
                 ( CLS % iTimerRKStep, 'RK Step', Level = 2 )
     call T_RK % Start ( )
@@ -357,15 +360,17 @@ contains
                   UseDeviceOption = Current % AllocatedDevice )
     end do
     call T_RK % Stop ( )
-    
+    iRoctxLevel = roctxRangePop ( )  !-- Preparing Step
 
     !-- Substep 1
     
     call Show ( 'Solving Substep 1', CONSOLE % INFO_4 )
 
     iRoctxLevel = roctxRangePush ( "RK_Substep_1" // char(0) )
+
     call CLS % ComputeUpdate ( TimeStep ) !-- K1 = dT * RHS
     
+    iRoctxLevel = roctxRangePush ( "Adding Update" // char(0) )
     call Show ( 'Adding Update', CONSOLE % INFO_5 )
     call T_RK % Start ( )
     do iV = 1, Current % N_CONSERVED
@@ -377,6 +382,7 @@ contains
                Current % Value ( :, iaC ( iV ) ), &
                UseDeviceOption = Current % AllocatedDevice )
     end do
+    iRoctxLevel = roctxRangePop ( )  !-- Adding Update
     
     call T_RK % Stop ( )
     
@@ -475,6 +481,8 @@ contains
     end if
     iRoctxLevel = roctxRangePop ( )  !-- Communication
     iRoctxLevel = roctxRangePop ( )  !-- RK_Substep_2
+
+    iRoctxLevel = roctxRangePop ( )  !-- CLS_Solve
     
     end associate !-- DM, etc.
     end associate !-- CF
@@ -495,6 +503,8 @@ contains
       iRoctxLevel
     type ( TimerForm ), pointer :: &
       T_U
+
+    iRoctxLevel = roctxRangePush ( "ComputeUpdate" // char(0) )
 
     call Show ( 'Computing Update', CONSOLE % INFO_5 )
     
@@ -536,6 +546,8 @@ contains
 
     end do
     
+    iRoctxLevel = roctxRangePop ( )  !-- ComputeUpdate
+
     end associate !-- DM
     end associate !-- CF
 

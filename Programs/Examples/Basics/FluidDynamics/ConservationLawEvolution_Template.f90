@@ -211,17 +211,13 @@ contains
 
       call Show ( 'Solving Conservation Equations', CONSOLE % INFO_2 )
 
-      iRoctxLevel = roctxRangePush ( "ComputeTimeStep" // char(0) )
       call ComputeTimeStep ( CLE )
       if ( CLE % Time + CLE % TimeStep > CLE % WriteTime ) &
         CLE % TimeStep = CLE % WriteTime - CLE % Time
       call Show ( CLE % TimeStep, CLE % TimeUnit, 'TimeStep', &
                   CONSOLE % INFO_3 )
-      iRoctxLevel = roctxRangePop ( )  !-- ComputeTimeStep
       
-      iRoctxLevel = roctxRangePush ( "CLS_Solve" // char(0) )
       call CLS % Solve ( CLE % TimeStep )
-      iRoctxLevel = roctxRangePop ( )  !-- CLS_Solve
 
       CLE % iCycle = CLE % iCycle + 1
       CLE % Time = CLE % Time + CLE % TimeStep
@@ -262,6 +258,8 @@ contains
     class ( ConservationLawEvolutionTemplate ), intent ( inout ) :: &
       CLE
 
+    integer ( KDI ) :: &
+      iRoctxLevel
     real ( KDR ), dimension ( :, :, : ), pointer :: &
       FEP_1, FEP_2, FEP_3, &
       FEM_1, FEM_2, FEM_3
@@ -273,6 +271,8 @@ contains
       CO
     type ( TimerForm ), pointer :: &
       T_TS
+
+    iRoctxLevel = roctxRangePush ( "ComputeTimeStep" // char(0) )
       
     associate &
       ( DM => CLE % DistributedMesh, &
@@ -313,6 +313,8 @@ contains
       = RampFactor * CLE % CourantFactor * CO % Incoming % Value ( 1 )
 
     call T_TS % Stop ( )
+
+    iRoctxLevel = roctxRangePop ( )  !-- ComputeTimeStep
  
     end associate !-- DM, etc.
 
