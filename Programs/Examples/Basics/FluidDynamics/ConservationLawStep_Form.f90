@@ -470,8 +470,12 @@ contains
     end if
     
     call T_C % Start ( )
+    iRoctxLevel = roctxRangePush ( "StartGhostExchange" // char(0) )
     call DM % StartGhostExchange ( )
+    iRoctxLevel = roctxRangePop ( )  !-- StartGhostExchange
+    iRoctxLevel = roctxRangePush ( "FinishGhostExchange" // char(0) )
     call DM % FinishGhostExchange ( )
+    iRoctxLevel = roctxRangePop ( )  !-- FinishGhostExchange
     call T_C % Stop ( )
     
     if ( .not. DM % DevicesCommunicate ) then

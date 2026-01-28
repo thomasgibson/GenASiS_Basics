@@ -1,7 +1,17 @@
 #ifdef ENABLE_OMP_OFFLOAD
 
 #define OMP_TARGET_DIRECTIVE target teams distribute
-#define OMP_TARGET_DISTRIBUTE_DIRECTIVE target teams distribute 
+#define OMP_TARGET_DISTRIBUTE_DIRECTIVE target teams distribute
+
+/* Default values for workgroup size and number of teams */
+/* Can be overridden via compiler defines: -DOMP_THREAD_LIMIT=128 -DOMP_NUM_TEAMS=3648 */
+#ifndef OMP_THREAD_LIMIT
+#define OMP_THREAD_LIMIT 512
+#endif
+
+#ifndef OMP_NUM_TEAMS
+#define OMP_NUM_TEAMS 1
+#endif 
 
 #ifdef POWER_XL
 #define OMP_SCHEDULE_TARGET static, 1

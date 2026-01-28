@@ -1,5 +1,6 @@
 module DistributedMesh_Form
 
+  use hipfort_roctx
   use Basics
 
   implicit none
@@ -234,6 +235,7 @@ contains
       iStrg, &  !-- iStorage
       iS, &  !-- iSelected
       iV, &  !-- iVariable
+      iRoctxLevel, & 
       oBuffer
     integer ( KDI ), dimension ( 3 ) :: &
       oSend, &
@@ -264,10 +266,12 @@ contains
     
     call Show ( 'Post Receives', CONSOLE % INFO_7 )
     
+    iRoctxLevel = roctxRangePush ( "Start-GE-Recv-Prev" // char(0) )
     if ( associated ( T_C ) ) call T_C % Start ( )
     call DM % IncomingPrevious % Receive ( )
     call DM % IncomingNext % Receive ( )
     if ( associated ( T_C ) ) call T_C % Stop ( )
+    iRoctxLevel = roctxRangePop ( )  !-- Start-GE-Recv-Prev
 
     !-- Send to Previous
     
@@ -283,6 +287,7 @@ contains
       nSend ( jD ) = DM % nCellsPerBrick ( jD )
       nSend ( kD ) = DM % nCellsPerBrick ( kD )
       
+      iRoctxLevel = roctxRangePush ( "Start-GE-Pack-Prev" // char(0) )
       if ( associated ( T_P ) ) call T_P % Start ( )
       do iStrg = 1, S_1D % nStorages
         do iS = 1, S_1D % nVariables ( iStrg )          
@@ -296,10 +301,13 @@ contains
         end do !-- iS
       end do !-- iStrg
       if ( associated ( T_P ) ) call T_P % Stop ( )
+      iRoctxLevel = roctxRangePop ( )  !-- Start-GE-Pack-Prev
 
+      iRoctxLevel = roctxRangePush ( "Start-GE-Send-Prev" // char(0) )
       if ( associated ( T_C ) ) call T_C % Start ( )
       call DM % OutgoingPrevious % Send ( iD )
       if ( associated ( T_C ) ) call T_C % Stop ( )
+      iRoctxLevel = roctxRangePop ( )  !-- Start-GE-Send-Prev
 
     end do !-- iD
 
@@ -319,6 +327,7 @@ contains
       nSend ( jD ) = DM % nCellsPerBrick ( jD )
       nSend ( kD ) = DM % nCellsPerBrick ( kD )
       
+      iRoctxLevel = roctxRangePush ( "Start-GE-Pack-Next" // char(0) )
       if ( associated ( T_P ) ) call T_P % Start ( )
       do iStrg = 1, S_1D % nStorages
         do iS = 1, S_1D % nVariables ( iStrg )          
@@ -332,10 +341,13 @@ contains
         end do !-- iS
       end do !-- iStrg
       if ( associated ( T_P ) ) call T_P % Stop ( )
+      iRoctxLevel = roctxRangePop ( )  !-- Start-GE-Pack-Next
 
+      iRoctxLevel = roctxRangePush ( "Start-GE-Send-Next" // char(0) )
       if ( associated ( T_C ) ) call T_C % Start ( )
       call DM % OutgoingNext % Send ( iD )
       if ( associated ( T_C ) ) call T_C % Stop ( )
+      iRoctxLevel = roctxRangePop ( )  !-- Start-GE-Send-Next
 
     end do !-- iD
     
@@ -356,6 +368,7 @@ contains
       iStrg, &  !-- iStorage
       iS, &  !-- iSelected
       iV, &  !-- iVariable
+      iRoctxLevel, & 
       oBuffer
     integer ( KDI ), dimension ( 3 ) :: &
       oReceive, &
@@ -393,10 +406,13 @@ contains
       nReceive ( jD ) = DM % nCellsPerBrick ( jD )
       nReceive ( kD ) = DM % nCellsPerBrick ( kD )
 
+      iRoctxLevel = roctxRangePush ( "Finish-GE-Wait-Next" // char(0) )
       if ( associated ( T_C ) ) call T_C % Start ( )
       call DM % IncomingNext % Wait ( iD )
       if ( associated ( T_C ) ) call T_C % Stop ( )
+      iRoctxLevel = roctxRangePop ( )  !-- Finish-GE-Wait-Next
 
+      iRoctxLevel = roctxRangePush ( "Finish-GE-Unpack-Next" // char(0) )
       if ( associated ( T_P ) ) call T_P % Start ( )
       do iStrg = 1, S_1D % nStorages
         do iS = 1, S_1D % nVariables ( iStrg )          
@@ -410,6 +426,7 @@ contains
         end do !-- iS
       end do !-- iStrg
       if ( associated ( T_P ) ) call T_P % Stop ( )
+      iRoctxLevel = roctxRangePop ( )  !-- Finish-GE-Unpack-Next
       
     end do !-- iD
 
@@ -426,10 +443,13 @@ contains
       nReceive ( jD ) = DM % nCellsPerBrick ( jD )
       nReceive ( kD ) = DM % nCellsPerBrick ( kD )
 
+      iRoctxLevel = roctxRangePush ( "Finish-GE-Wait-Prev" // char(0) )
       if ( associated ( T_C ) ) call T_C % Start ( )
       call DM % IncomingPrevious % Wait ( iD )
       if ( associated ( T_C ) ) call T_C % Stop ( )
+      iRoctxLevel = roctxRangePop ( )  !-- Finish-GE-Wait-Prev
 
+      iRoctxLevel = roctxRangePush ( "Finish-GE-Unpack-Prev" // char(0) )
       if ( associated ( T_P ) ) call T_P % Start ( )
       do iStrg = 1, S_1D % nStorages
         do iS = 1, S_1D % nVariables ( iStrg )          
@@ -443,15 +463,18 @@ contains
         end do !-- iS
       end do !-- iStrg
       if ( associated ( T_P ) ) call T_P % Stop ( )
+      iRoctxLevel = roctxRangePop ( )  !-- Finish-GE-Unpack-Prev
       
     end do !-- iD
 
     !-- Cleanup
     
+    iRoctxLevel = roctxRangePush ( "Finish-GE-Cleanup-Wait" // char(0) )
     if ( associated ( T_C ) ) call T_C % Start ( )
     call DM % OutgoingPrevious % Wait ( )
     call DM % OutgoingNext % Wait ( )
     if ( associated ( T_C ) ) call T_C % Stop ( )
+    iRoctxLevel = roctxRangePop ( )  !-- Finish-GE-Cleanup-Wait
 
     nullify ( V )
     
