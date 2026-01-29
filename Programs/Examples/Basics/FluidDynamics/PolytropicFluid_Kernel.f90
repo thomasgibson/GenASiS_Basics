@@ -17,7 +17,7 @@ contains
     if ( UseDevice ) then
       
       !$OMP OMP_TARGET_DIRECTIVE parallel do simd &
-      !$OMP num_teams ( OMP_NUM_TEAMS ) thread_limit ( OMP_THREAD_LIMIT ) &
+      !$OMP thread_limit ( OMP_THREAD_LIMIT ) &
       !$OMP schedule ( OMP_SCHEDULE_TARGET )
       do iV = 1, size ( G )
         G ( iV ) = E ( iV ) + 0.5_KDR * N ( iV ) &
@@ -103,7 +103,7 @@ contains
     if ( UseDevice ) then
       
       !$OMP OMP_TARGET_DIRECTIVE parallel do simd &
-      !$OMP num_teams ( OMP_NUM_TEAMS ) thread_limit ( OMP_THREAD_LIMIT ) &
+      !$OMP thread_limit ( OMP_THREAD_LIMIT ) &
       !$OMP schedule ( OMP_SCHEDULE_TARGET )
       do iV = 1, size ( P )
         P ( iV ) = E ( iV ) * ( Gamma ( iV ) - 1.0_KDR )
@@ -155,7 +155,7 @@ contains
     if ( UseDevice ) then
       
       !$OMP OMP_TARGET_DIRECTIVE parallel do simd &
-      !$OMP num_teams ( OMP_NUM_TEAMS ) thread_limit ( OMP_THREAD_LIMIT ) &
+      !$OMP thread_limit ( OMP_THREAD_LIMIT ) &
       !$OMP schedule ( OMP_SCHEDULE_TARGET )
       do iV = 1, size ( N )
         if ( N ( iV ) > 0.0_KDR .and. P ( iV ) > 0.0_KDR ) then
@@ -166,7 +166,7 @@ contains
       end do
       !$OMP end OMP_TARGET_DIRECTIVE parallel do simd
       
-      !$OMP OMP_TARGET_DIRECTIVE parallel do simd num_teams ( OMP_NUM_TEAMS ) thread_limit ( OMP_THREAD_LIMIT )&
+      !$OMP OMP_TARGET_DIRECTIVE parallel do simd thread_limit ( OMP_THREAD_LIMIT ) &
       !$OMP schedule ( OMP_SCHEDULE_TARGET )
       do iV = 1, size ( N )
         FEP_1 ( iV ) = V_1 ( iV ) + CS ( iV )
@@ -281,7 +281,7 @@ contains
     
     if ( UseDevice ) then
       !$OMP OMP_TARGET_DIRECTIVE parallel do simd &
-      !$OMP num_teams ( OMP_NUM_TEAMS ) thread_limit ( OMP_THREAD_LIMIT ) &
+      !$OMP thread_limit ( OMP_THREAD_LIMIT ) &
       !$OMP schedule ( OMP_SCHEDULE_TARGET )
       do iV = 1, size ( P )
         F_D ( iV )     = D ( iV )   * V_Dim ( iV ) 

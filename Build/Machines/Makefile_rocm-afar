@@ -58,12 +58,9 @@ ifeq ($(ENABLE_OMP_OFFLOAD), 1)
   CC_COMPILE      += --offload-arch=${GFXARCH}
   LINK            += --offload-arch=${GFXARCH}
   DEFINES         += -DENABLE_OMP_OFFLOAD -D__HIP_PLATFORM_AMD__ -DUSE_LLVM_RUNTIME
-  # Add OpenMP workgroup/teams configuration if set via environment
+  # Add OpenMP thread_limit configuration if set via environment
   ifneq ($(OMP_THREAD_LIMIT),)
     DEFINES += -DOMP_THREAD_LIMIT=$(OMP_THREAD_LIMIT)
-  endif
-  ifneq ($(OMP_NUM_TEAMS),)
-    DEFINES += -DOMP_NUM_TEAMS=$(OMP_NUM_TEAMS)
   endif
 else
 #  DEFINES       += --offload=disable

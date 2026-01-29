@@ -17,7 +17,7 @@ contains
     if ( UseDevice ) then 
     
       !$OMP OMP_TARGET_DIRECTIVE parallel do simd &
-      !$OMP num_teams ( OMP_NUM_TEAMS ) thread_limit ( OMP_THREAD_LIMIT ) &
+      !$OMP thread_limit ( OMP_THREAD_LIMIT ) &
       !$OMP schedule ( OMP_SCHEDULE_TARGET )
       do iV = 1, size ( D )
         D   ( iV ) = N ( iV )
