@@ -204,6 +204,7 @@ contains
     T  =>  PROGRAM_HEADER % Timer &
              ( CLE % iTimerComputation, 'Computation', Level = 1 )
     call T % Start ( )
+    iRoctxLevel = roctxRangePush ( "Computation" // char(0) )
 
     do while ( CLE % Time < CLE % FinishTime &
                .and. CLE % iCycle < CLE % FinishCycle )
@@ -227,6 +228,7 @@ contains
       if ( CLE % Time >= CLE % WriteTime ) then
 
         call T % Stop ( )
+        iRoctxLevel = roctxRangePop ( )  !-- Computation
         
         if ( .not. CLE % NoWrite ) then
           call DM % Write &
@@ -240,6 +242,7 @@ contains
         call Show ( CLE % Time, CLE % TimeUnit, 'Time', CONSOLE % INFO_1 )
 
         call T % Start ( )
+        iRoctxLevel = roctxRangePush ( "Computation" // char(0) )
         
       end if
       iRoctxLevel = roctxRangePop ( )  !-- EvolveStep
@@ -247,6 +250,7 @@ contains
     end do
     
     call T % Stop ( )
+    iRoctxLevel = roctxRangePop ( )  !-- Computation
     
     end associate !-- DM, etc.
 

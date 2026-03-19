@@ -351,7 +351,7 @@ contains
     
     call Show ( 'Preparing Step', CONSOLE % INFO_4 )
     
-    iRoctxLevel = roctxRangePush ( "Preparing Step" // char(0) )
+    iRoctxLevel = roctxRangePush ( "RK Step" // char(0) )
     T_RK  =>  PROGRAM_HEADER % Timer &
                 ( CLS % iTimerRKStep, 'RK Step', Level = 2 )
     call T_RK % Start ( )
@@ -360,7 +360,7 @@ contains
                   UseDeviceOption = Current % AllocatedDevice )
     end do
     call T_RK % Stop ( )
-    iRoctxLevel = roctxRangePop ( )  !-- Preparing Step
+    iRoctxLevel = roctxRangePop ( )  !-- RK Step
 
     !-- Substep 1
     
@@ -370,7 +370,7 @@ contains
 
     call CLS % ComputeUpdate ( TimeStep ) !-- K1 = dT * RHS
     
-    iRoctxLevel = roctxRangePush ( "Adding Update" // char(0) )
+    iRoctxLevel = roctxRangePush ( "RK Step" // char(0) )
     call Show ( 'Adding Update', CONSOLE % INFO_5 )
     call T_RK % Start ( )
     do iV = 1, Current % N_CONSERVED
@@ -382,31 +382,36 @@ contains
                Current % Value ( :, iaC ( iV ) ), &
                UseDeviceOption = Current % AllocatedDevice )
     end do
-    iRoctxLevel = roctxRangePop ( )  !-- Adding Update
-    
     call T_RK % Stop ( )
+    iRoctxLevel = roctxRangePop ( )  !-- RK Step
     
     call Show ( 'Computing Fluid', CONSOLE % INFO_5 )
 
+    iRoctxLevel = roctxRangePush ( "ComputePrimitive" // char(0) )
     T_P  =>  PROGRAM_HEADER % Timer &
                ( CLS % iTimerPrimitive, 'Compute Primitive', Level = 2 )
     call T_P % Start ( )
     call Current % ComputePrimitive ( Current % Value )
     call T_P % Stop ( )
+    iRoctxLevel = roctxRangePop ( )  !-- ComputePrimitive
     
+    iRoctxLevel = roctxRangePush ( "ComputeAuxiliary" // char(0) )
     T_A  =>  PROGRAM_HEADER % Timer &
                ( CLS % iTimerAuxiliary, 'Compute Auxiliary', Level = 2 )
     call T_A % Start ( )
     call Current % ComputeAuxiliary ( Current % Value )
     call T_A % Stop ( )
+    iRoctxLevel = roctxRangePop ( )  !-- ComputeAuxiliary
     
      T_DT_H  =>  PROGRAM_HEADER % Timer &
                   ( CLS % iTimerDataTransferHost, 'DataTransfer to Host', &
                     Level = 2 )
     if ( .not. DM % DevicesCommunicate ) then
+      iRoctxLevel = roctxRangePush ( "DataTransfer to Host" // char(0) )
       call T_DT_H % Start ( )
       call Primitive % UpdateHost ( ) 
       call T_DT_H % Stop ( )
+      iRoctxLevel = roctxRangePop ( )  !-- DataTransfer to Host
     end if
 
     iRoctxLevel = roctxRangePush ( "Communication" // char(0) )
@@ -422,9 +427,11 @@ contains
                   ( CLS % iTimerDataTransferDevice, 'DataTransfer to Device', &
                     Level = 2 )
     if ( .not. DM % DevicesCommunicate ) then
+      iRoctxLevel = roctxRangePush ( "DataTransfer to Device" // char(0) )
       call T_DT_D % Start ( )
       call Primitive % UpdateDevice ( )
       call T_DT_D % Stop ( )
+      iRoctxLevel = roctxRangePop ( )  !-- DataTransfer to Device
     end if
     iRoctxLevel = roctxRangePop ( )  !-- RK_Substep_1
     
@@ -435,6 +442,7 @@ contains
     iRoctxLevel = roctxRangePush ( "RK_Substep_2" // char(0) )
     call CLS % ComputeUpdate ( TimeStep ) !-- K2 = dT * RHS
     
+    iRoctxLevel = roctxRangePush ( "RK Step" // char(0) )
     call Show ( 'Combining Updates', CONSOLE % INFO_5 )
     call T_RK % Start ( )
     do iV = 1, Current % N_CONSERVED
@@ -451,22 +459,29 @@ contains
                UseDeviceOption = Current % AllocatedDevice )
     end do
     call T_RK % Stop ( )
+    iRoctxLevel = roctxRangePop ( )  !-- RK Step
     
     call Show ( 'Computing Fluid', CONSOLE % INFO_5 )
 
+    iRoctxLevel = roctxRangePush ( "ComputePrimitive" // char(0) )
     call T_P % Start ( )
     call Current % ComputePrimitive ( Current % Value )
     call T_P % Stop ( )
+    iRoctxLevel = roctxRangePop ( )  !-- ComputePrimitive
     
+    iRoctxLevel = roctxRangePush ( "ComputeAuxiliary" // char(0) )
     call T_A % Start ( )
     call Current % ComputeAuxiliary ( Current % Value )
     call T_A % Stop ( )
+    iRoctxLevel = roctxRangePop ( )  !-- ComputeAuxiliary
     
     iRoctxLevel = roctxRangePush ( "Communication" // char(0) )
     if ( .not. DM % DevicesCommunicate ) then
+      iRoctxLevel = roctxRangePush ( "DataTransfer to Host" // char(0) )
       call T_DT_H % Start ( )
       call Primitive % UpdateHost ( ) 
       call T_DT_H % Stop ( )
+      iRoctxLevel = roctxRangePop ( )  !-- DataTransfer to Host
     end if
     
     call T_C % Start ( )
@@ -479,9 +494,11 @@ contains
     call T_C % Stop ( )
     
     if ( .not. DM % DevicesCommunicate ) then
+      iRoctxLevel = roctxRangePush ( "DataTransfer to Device" // char(0) )
       call T_DT_D % Start ( )
       call Primitive % UpdateDevice ( ) 
       call T_DT_D % Stop ( )
+      iRoctxLevel = roctxRangePop ( )  !-- DataTransfer to Device
     end if
     iRoctxLevel = roctxRangePop ( )  !-- Communication
     iRoctxLevel = roctxRangePop ( )  !-- RK_Substep_2
@@ -566,7 +583,8 @@ contains
       iD
 
     integer ( KDI ) :: &
-      iP  !-- iPrimitive
+      iP, &  !-- iPrimitive
+      iRoctxLevel
     real ( KDR ), dimension ( :, :, : ), pointer :: &
       V, &
       dV_Left, &
@@ -578,6 +596,7 @@ contains
     associate ( CF => CLS % ConservedFields )
     associate ( DM => CF % DistributedMesh )
     
+    iRoctxLevel = roctxRangePush ( "ApplyBoundaryConditions" // char(0) )
     T_BC  =>  PROGRAM_HEADER % Timer &
                 ( CLS % iTimerBoundaryCondition, 'ApplyBoundaryConditions', &
                   Level = 2 )
@@ -589,6 +608,7 @@ contains
            ( CF % Value, CF % Value, iD, iBoundary = +1, &
              PrimitiveOnlyOption = .true. )
     call T_BC % Stop ( )
+    iRoctxLevel = roctxRangePop ( )  !-- ApplyBoundaryConditions
            
     T_D  =>  PROGRAM_HEADER % Timer &
                 ( CLS % iTimerDifference, 'Difference', &
@@ -621,7 +641,8 @@ contains
       CLS
 
     integer ( KDI ) :: &
-      iP  !-- iPrimitive
+      iP, &  !-- iPrimitive
+      iRoctxLevel
     type ( TimerForm ), pointer :: &
       T_R, &
       T_A, &
@@ -645,6 +666,7 @@ contains
       call T_R % Stop ( )
     end do
 
+    iRoctxLevel = roctxRangePush ( "ComputeAuxiliary" // char(0) )
     T_A  =>  PROGRAM_HEADER % Timer &
                ( CLS % iTimerAuxiliary, 'ComputeAuxiliary', Level = 2 )
     call T_A % Start ( )
@@ -653,7 +675,9 @@ contains
     call CF % ComputeAuxiliary &
            ( CLS % ReconstructionOuter % Value )             
     call T_A % Stop ( )
+    iRoctxLevel = roctxRangePop ( )  !-- ComputeAuxiliary
     
+    iRoctxLevel = roctxRangePush ( "ComputeConserved" // char(0) )
     T_C  =>  PROGRAM_HEADER % Timer &
                ( CLS % iTimerConserved, 'ComputeConserved', Level = 2 )
     call T_C % Start ( )
@@ -662,6 +686,7 @@ contains
     call CF % ComputeConserved &
            ( CLS % ReconstructionOuter % Value )             
     call T_C % Stop ( )
+    iRoctxLevel = roctxRangePop ( )  !-- ComputeConserved
     
     end associate !-- iaP
     end associate !-- CF
@@ -677,7 +702,8 @@ contains
       iDimension
 
     integer ( KDI ) :: &
-      iV  !-- iVariable
+      iV, &  !-- iVariable
+      iRoctxLevel
     real ( KDR ), dimension ( :, :, : ), pointer :: &
       AP_I, AP_O, &
       AM_I, AM_O, &
@@ -695,6 +721,7 @@ contains
       ( DM  => CF % DistributedMesh, &
         iaC => CF % iaConserved )
 
+    iRoctxLevel = roctxRangePush ( "ApplyBoundaryConditions" // char(0) )
     T_BC  =>  PROGRAM_HEADER % Timer &
                 ( CLS % iTimerBoundaryCondition, 'ApplyBoundaryConditions', &
                   Level = 2 )
@@ -707,7 +734,9 @@ contains
            ( CLS % ReconstructionInner % Value, &
              CLS % ReconstructionOuter % Value, iDimension, iBoundary = +1 )
     call T_BC % Stop ( )
+    iRoctxLevel = roctxRangePop ( )  !-- ApplyBoundaryConditions
 
+    iRoctxLevel = roctxRangePush ( "RiemannSolverInput" // char(0) )
     T_RSI  =>  PROGRAM_HEADER % Timer &
                  ( CLS % iTimerRiemannSolverInput, 'RiemannSolverInput', &
                    Level = 2 )
@@ -716,7 +745,9 @@ contains
            ( CLS, CLS % ReconstructionInner % Value, &
              CLS % ReconstructionOuter % Value, iDimension )
     call T_RSI % Stop ( )
+    iRoctxLevel = roctxRangePop ( )  !-- RiemannSolverInput
 
+    iRoctxLevel = roctxRangePush ( "RawFluxes" // char(0) )
     T_RF  =>  PROGRAM_HEADER % Timer &
                 ( CLS % iTimerRawFluxes, 'RawFluxes', &
                   Level = 2 )
@@ -728,6 +759,7 @@ contains
            ( CLS % RawFluxOuter % Value, CLS % ReconstructionOuter % Value, &
              iDimension )
     call T_RF % Stop ( )
+    iRoctxLevel = roctxRangePop ( )  !-- RawFluxes
     
     call DM % SetVariablePointer &
            ( CLS % ModifiedSpeedsInner % Value ( :, CLS % ALPHA_PLUS ), AP_I )
